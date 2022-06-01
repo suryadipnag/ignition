@@ -109,18 +109,38 @@ class LogstashFormatter(logging.Formatter):
         return json.dumps(message)
 
     def format(self, record):
-        message = {
-            '@timestamp': self.format_timestamp(record.created),
-            '@version': '1',
-            'message': record.getMessage(),
-            'host': self.host,
-            'path': record.pathname,
-            'tags': self.tags,
-            'type': self.message_type,
-            'thread_name': record.threadName,
-            'level': record.levelname,
-            'logger_name': record.name
-        }
+        log_msg = record.getMessage()
+        payload = ''
+        corelation_id = 0
+        if(log_msg.startswith('lifecycle_name:Create') or log_msg.startswith('lifecycle_name:Delete') or log_msg.startswith('lifecycle_name:Update')):
+            corelation_id = str(uuid.uuid1())
+        if(corelation_id == 0):
+            message = {
+                '@timestamp': self.format_timestamp(record.created),
+                '@version': '1',
+                'message': record.getMessage(),
+                'host': self.host,
+                'path': record.pathname,
+                'tags': self.tags,
+                'type': self.message_type,
+                'thread_name': record.threadName,
+                'level': record.levelname,
+                'logger_name': record.name
+            }
+        else:
+            message = {
+                '@timestamp': self.format_timestamp(record.created),
+                '@version': '1',
+                'message': record.getMessage(),
+                'corelation_id': corelation_id,
+                'host': self.host,
+                'path': record.pathname,
+                'tags': self.tags,
+                'type': self.message_type,
+                'thread_name': record.threadName,
+                'level': record.levelname,
+                'logger_name': record.name
+            }
 
         # add LM transactional context to log message
         message.update(logging_context.get_all())
@@ -130,7 +150,6 @@ class LogstashFormatter(logging.Formatter):
             message.update(self.get_debug_fields(record))
 
         return self.serialize(message)
-
 
 
 # configure logging
