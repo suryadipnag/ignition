@@ -25,6 +25,8 @@ LOGGING_CONTEXT_KEY_PREFIX = "tracectx."
 LM_HTTP_HEADER_TXNID = "TransactionId".lower()
 LM_HTTP_HEADER_PROCESS_ID = "ProcessId".lower()
 
+lifecycle = ["lifecycle_name:Create", "lifecycle_name:Delete", "lifecycle_name:Update"]
+
 class LoggingContext(threading.local):
 
     def __init__(self):
@@ -112,7 +114,7 @@ class LogstashFormatter(logging.Formatter):
         log_msg = record.getMessage()
         payload = ''
         corelation_id = 0
-        if(log_msg.startswith('lifecycle_name:Create') or log_msg.startswith('lifecycle_name:Delete') or log_msg.startswith('lifecycle_name:Update')):
+        if(log_msg.startswith(tuple(lifecycle))):
             corelation_id = str(uuid.uuid1())
         if(corelation_id == 0):
             message = {
