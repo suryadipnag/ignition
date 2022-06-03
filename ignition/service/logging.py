@@ -25,7 +25,7 @@ LOGGING_CONTEXT_KEY_PREFIX = "tracectx."
 LM_HTTP_HEADER_TXNID = "TransactionId".lower()
 LM_HTTP_HEADER_PROCESS_ID = "ProcessId".lower()
 
-lifecycle = ["lifecycle_name:Create", "lifecycle_name:Delete", "lifecycle_name:Update"]
+lifecycle = ["Lifecycle_name:Create", "Lifecycle_name:Delete", "Lifecycle_name:Update", "Lifecycle_name:Install", "Lifecycle_name:Uninstall", "Lifecycle_name:Configure", "Lifecycle_name:Reconfigure", "Lifecycle_name:Integrity", "Lifecycle_name:Start", "Lifecycle_name:Stop"]
 
 class LoggingContext(threading.local):
 
@@ -66,6 +66,8 @@ class SensitiveDataFormatter(logging.Formatter):
         return re.sub(PRIVATE_KEY_REGEX, OBFUSCATED_PRIVATE_KEY, record_message)
 
 class LogstashFormatter(logging.Formatter):
+
+    correlation_id = 0
 
     def __init__(self, message_type='Logstash', tags=None, fqdn=False):
         self.message_type = message_type
@@ -112,11 +114,9 @@ class LogstashFormatter(logging.Formatter):
 
     def format(self, record):
         log_msg = record.getMessage()
-        payload = ''
-        corelation_id = 0
         if(log_msg.startswith(tuple(lifecycle))):
-            corelation_id = str(uuid.uuid1())
-        if(corelation_id == 0):
+            logstash_formatter.correlation_id = str(uuid.uuid1())
+        if(logstash_formatter.correlation_id == 0):
             message = {
                 '@timestamp': self.format_timestamp(record.created),
                 '@version': '1',
@@ -134,7 +134,7 @@ class LogstashFormatter(logging.Formatter):
                 '@timestamp': self.format_timestamp(record.created),
                 '@version': '1',
                 'message': record.getMessage(),
-                'corelation_id': corelation_id,
+                'correlation_id': logstash_formatter.correlation_id,
                 'host': self.host,
                 'path': record.pathname,
                 'tags': self.tags,
@@ -177,3 +177,5 @@ logging.getLogger().setLevel(log_level)
 logging.getLogger('kafka').setLevel('INFO')
 
 logging_context = LoggingContext()
+
+logstash_formatter = LogstashFormatter('logstash')
