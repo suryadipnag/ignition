@@ -207,8 +207,11 @@ class ResourceDriverApiService(Service, ResourceDriverApiCapability, BaseControl
             request_properties = self.get_body_field(body, 'requestProperties', {})
             associated_topology = self.get_body_field(body, 'associatedTopology', {})
             deployment_location = self.get_body_required_field(body, 'deploymentLocation')
+            logger.info(f'Lifecycle_name:{lifecycle_name}')
+            logger.info('Request Payload %s', body)
             execute_response = self.service.execute_lifecycle(lifecycle_name, driver_files, system_properties, resource_properties, request_properties, associated_topology, deployment_location)
             response = lifecycle_execute_response_dict(execute_response)
+            logger.info('Response Payload %s', response)
             return (response, 202)
         finally:
             logging_context.clear()
