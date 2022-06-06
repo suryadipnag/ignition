@@ -1,3 +1,4 @@
+from flask import request
 from ignition.service.framework import Capability, Service, interface
 from ignition.service.config import ConfigurationPropertiesGroup, ConfigurationProperties
 from ignition.service.api import BaseController
@@ -20,6 +21,7 @@ import shutil
 import base64
 import pathlib
 import ignition.openapi as openapi
+import copy
 
 logger = logging.getLogger(__name__)
 # Grabs the __init__.py from the openapi package then takes it's parent, the openapi directory itself
@@ -207,11 +209,29 @@ class ResourceDriverApiService(Service, ResourceDriverApiCapability, BaseControl
             request_properties = self.get_body_field(body, 'requestProperties', {})
             associated_topology = self.get_body_field(body, 'associatedTopology', {})
             deployment_location = self.get_body_required_field(body, 'deploymentLocation')
+            
+            # appending correlation_id into request body logger
+            correlation_id = self.get_correlation_id()
+            body["correlation_id"] = correlation_id
+            if request:
+                body["content_type"] = request.content_type
+            logger.info(f'Lifecycle_name:{lifecycle_name} %s', body)
+
             execute_response = self.service.execute_lifecycle(lifecycle_name, driver_files, system_properties, resource_properties, request_properties, associated_topology, deployment_location)
             response = lifecycle_execute_response_dict(execute_response)
+
+            # appending correlation_id into response body logger
+            responseBody = copy.deepcopy(response)
+            responseBody["correlation_id"] = correlation_id
+            logger.info(f'Lifecycle_name:{lifecycle_name} %s', responseBody)
+
             return (response, 202)
         finally:
             logging_context.clear()
+
+    def get_correlation_id(self):
+        correlation_id = str(uuid.uuid1())
+        return correlation_id
 
     def find_reference(self, **kwarg):
         try:
